@@ -1,0 +1,28 @@
+{
+  "name": "trading-app",
+  "version": "1.0.0",
+  "description": "Gated trading web application",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=backend & npm run dev --workspace=frontend",
+    "build": "npm run build --workspaces",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "prisma:generate": "npm run prisma:generate --workspace=backend",
+    "prisma:migrate": "npm run prisma:migrate --workspace=backend",
+    "prisma:seed": "npm run prisma:seed --workspace=backend"
+  },
+  "keywords": [
+    "trading",
+    "react",
+    "express",
+    "prisma",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT"
+}

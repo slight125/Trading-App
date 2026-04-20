@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for registered users
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String     // Remember to hash passwords in production
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  payments     Payment[]
+  tradingLinks TradingLink[]
+}
+
+// Payment model to track user payments
+model Payment {
+  id        String     @id @default(cuid())
+  userId    String
+  status    String     @default("pending") // pending, completed, failed
+  amount    Float      @default(99.99)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// TradingLink model for one-time access tokens
+model TradingLink {
+  id        String     @id @default(cuid())
+  token     String     @unique @db.VarChar(255)
+  userId    String
+  paymentId String
+  isUsed    Boolean    @default(false)
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
