@@ -30,6 +30,8 @@ const DashboardPage: React.FC = () => {
   const [paymentError, setPaymentError] = useState("");
   const [linkError, setLinkError] = useState("");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   // Fetch payments and links on mount
   useEffect(() => {
@@ -49,7 +51,13 @@ const DashboardPage: React.FC = () => {
       setPayments(response.data);
       setPaymentError("");
     } catch (error: any) {
-      setPaymentError(error.response?.data?.error || "Failed to fetch payments");
+      const errorMsg = error.response?.data?.error || error.message || "Failed to fetch payments";
+      console.error("Fetch payments error:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+      setPaymentError(errorMsg);
     } finally {
       setIsLoadingPayments(false);
     }
@@ -62,28 +70,39 @@ const DashboardPage: React.FC = () => {
       setTradingLinks(response.data);
       setLinkError("");
     } catch (error: any) {
-      setLinkError(error.response?.data?.error || "Failed to fetch links");
+      const errorMsg = error.response?.data?.error || error.message || "Failed to fetch links";
+      console.error("Fetch links error:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+      setLinkError(errorMsg);
     } finally {
       setIsLoadingLinks(false);
     }
   };
 
   const handleCreatePayment = async () => {
+    setIsModalOpen(true);
+  };
+
+  const handleKcbPayment = async () => {
+    if (!phoneNumber) {
+      setPaymentError("Please enter a valid phone number.");
+      return;
+    }
     setPaymentError("");
     setIsCreatingPayment(true);
 
     try {
-      const response = await paymentAPI.createPayment(99.99);
-      const paymentId = response.data.payment.id;
-
-      // In production, you would redirect to a payment provider (Stripe, PayPal, etc.)
-      // For now, we'll simulate confirmation
-      await paymentAPI.confirmPayment(paymentId);
-
-      setPayments([...payments, response.data.payment]);
-      alert("Payment confirmed! You can now create a trading link.");
+      // The amount in KES, e.g., 1000
+      const response = await paymentAPI.initiateKcbPayment(1000, phoneNumber);
+      alert(response.data.message);
+      setIsModalOpen(false);
+      fetchPayments(); // Refresh payments list
     } catch (error: any) {
       setPaymentError(error.response?.data?.error || "Payment failed");
+      console.error("KCB Payment error:", error);
     } finally {
       setIsCreatingPayment(false);
     }
@@ -91,16 +110,25 @@ const DashboardPage: React.FC = () => {
 
   const handleCreateLink = async () => {
     setLinkError("");
+    
+    // Find the most recent completed payment
+    const completedPayment = payments.find((p: any) => p.status === "completed");
+    if (!completedPayment) {
+      setLinkError("No completed payment found. Please make a payment first.");
+      return;
+    }
+
     setIsCreatingLink(true);
 
     try {
-      const response = await tradingAPI.createLink();
-      setTradingLinks([{ ...response.data.link, id: Date.now().toString() }, ...tradingLinks]);
+      const response = await tradingAPI.createLink(completedPayment.id);
+      setTradingLinks([{ ...response.data, id: response.data.token }, ...tradingLinks]);
 
       // Show the link to the user
-      alert(`Your trading link has been created! Share this with your user:\n\n${response.data.link.url}`);
+      alert(`Your trading link has been created! Share this with your user:\n\n${response.data.url}`);
     } catch (error: any) {
       setLinkError(error.response?.data?.error || "Failed to create link");
+      console.error("Link creation error:", error);
     } finally {
       setIsCreatingLink(false);
     }
@@ -162,7 +190,7 @@ const DashboardPage: React.FC = () => {
                       {payment.status.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-2xl font-bold text-white mt-2">${payment.amount}</p>
+                  <p className="text-2xl font-bold text-white mt-2">KES {payment.amount}</p>
                   <p className="text-sm text-gray-400 mt-1">
                     {new Date(payment.createdAt).toLocaleDateString()}
                   </p>
@@ -177,7 +205,7 @@ const DashboardPage: React.FC = () => {
               disabled={isCreatingPayment}
               className="mt-6 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition disabled:opacity-50"
             >
-              {isCreatingPayment ? "Processing..." : "Make Payment ($99.99)"}
+              {isCreatingPayment ? "Processing..." : "Make Payment (KES 1000)"}
             </button>
           )}
         </div>
@@ -251,6 +279,41 @@ const DashboardPage: React.FC = () => {
           )}
         </div>
       </div>
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-purple-500/30 rounded-2xl p-8 shadow-2xl w-full max-w-md">
+            <h2 className="text-2xl font-bold text-white mb-6">Enter Phone Number</h2>
+            <p className="text-gray-400 mb-4">Enter your M-Pesa phone number to receive a payment request.</p>
+            <input
+              type="text"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="e.g., 254712345678"
+              className="w-full bg-slate-700/50 border border-purple-500/30 rounded-lg px-4 py-3 text-white mb-6"
+            />
+            {paymentError && (
+              <div className="mb-4 p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-300">
+                {paymentError}
+              </div>
+            )}
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleKcbPayment}
+                disabled={isCreatingPayment}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition disabled:opacity-50"
+              >
+                {isCreatingPayment ? "Processing..." : "Pay KES 1000"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,6 +4,13 @@ const authenticate = (req, res, next) => {
   try {
     const token = req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
 
+    // Debug logging
+    if (!token) {
+      console.log("Auth middleware - No token found");
+      console.log("Cookies received:", req.cookies);
+      console.log("Authorization header:", req.headers.authorization);
+    }
+
     if (!token) {
       return res.status(401).json({ error: "Unauthorized: No token provided" });
     }

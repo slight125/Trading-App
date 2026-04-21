@@ -25,11 +25,12 @@ export const paymentAPI = {
   createPayment: (amount: number) => api.post("/api/payments/create", { amount }),
   confirmPayment: (id: string) => api.post(`/api/payments/${id}/confirm`),
   getPayments: () => api.get("/api/payments"),
+  initiateKcbPayment: (amount: number, phoneNumber: string) => api.post("/api/payments/kcb/initiate", { amount, phoneNumber }),
 };
 
 // Trading API calls
 export const tradingAPI = {
-  createLink: () => api.post("/api/trading/create-link"),
+  createLink: (paymentId: string) => api.post("/api/trading/create-link", { paymentId }),
   getLinks: () => api.get("/api/trading/links"),
   validateLink: (token: string) => api.get(`/api/trading/validate-link/${token}`),
 };

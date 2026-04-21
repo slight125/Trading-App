@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // Create payment
 router.post("/create", authenticate, async (req, res) => {
   try {
-    const { amount, description } = req.body;
+    const { amount } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Valid amount required" });
@@ -18,7 +18,6 @@ router.post("/create", authenticate, async (req, res) => {
       data: {
         userId: req.userId,
         amount,
-        description: description || "",
         status: "pending",
       },
     });

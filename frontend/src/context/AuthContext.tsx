@@ -19,14 +19,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Fetch user profile on mount
   useEffect(() => {
-    fetchUser();
+    verifySessionOnMount();
   }, []);
+
+  const verifySessionOnMount = async () => {
+    try {
+      setIsLoading(true);
+      const response = await authAPI.getProfile();
+      setUser(response.data.user || response.data);
+    } catch (error: any) {
+      // Silently fail on mount - let user log in fresh if needed
+      // Don't set user to null yet, let the page decide
+      console.log("No valid session found");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchUser = async () => {
     try {
+      setIsLoading(true);
       const response = await authAPI.getProfile();
-      setUser(response.data);
-    } catch (error) {
+      setUser(response.data.user || response.data);
+    } catch (error: any) {
+      console.error("Failed to fetch user profile:", error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -34,13 +50,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string) => {
-    const response = await authAPI.login(email, password);
-    setUser(response.data.user);
+    try {
+      const response = await authAPI.login(email, password);
+      setUser(response.data.user);
+      // Refresh user after login to ensure token is set
+      await fetchUser();
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setUser(null);
+      throw error;
+    }
   };
 
   const register = async (email: string, password: string) => {
-    const response = await authAPI.register(email, password);
-    setUser(response.data.user);
+    try {
+      const response = await authAPI.register(email, password);
+      setUser(response.data.user);
+      // Refresh user after registration to ensure token is set
+      await fetchUser();
+    } catch (error: any) {
+      console.error("Register error:", error);
+      setUser(null);
+      throw error;
+    }
   };
 
   const logout = async () => {

@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/auth");
 const tradingRoutes = require("./routes/trading");
 const paymentRoutes = require("./routes/payments");
+const kcbRoutes = require("./routes/kcb");
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/trading", tradingRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/payments/kcb", kcbRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
